@@ -1,0 +1,25 @@
+{
+    "appKeys": {
+        "SUMMARY_DAY": 12,
+        "SUMMARY_HOUR": 11,
+        "SUMMARY_NOW": 10,
+        "SUMMARY_WEEK": 13
+    },
+    "capabilities": [
+        "location"
+    ],
+    "companyName": "richard@richardfryer.com",
+    "longName": "Simple watch face with weather info from forecast.io",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "2",
+    "shortName": "WeatherWatch",
+    "uuid": "0c876a2c-9808-4270-b71f-49c946ce8e11",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
