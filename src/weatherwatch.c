@@ -31,6 +31,11 @@ static TextLayer *s_forecast2;
 static TextLayer *s_forecast3;
 static TextLayer *s_forecast4;
 
+time_t expires1 = 0;
+time_t expires2 = 0;
+time_t expires3 = 0;
+time_t expires4 = 0;
+
 static void initialise_ui(void) {
   s_window = window_create();
   window_set_background_color(s_window, GColorBlack);
@@ -171,6 +176,7 @@ static void sync_changed_handler(const uint32_t key, const Tuple* new_tuple, con
       }
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Value: %s", new_tuple->value->cstring);
       text_layer_set_text_max_size(s_forecast1, new_tuple->value->cstring, GSize(144, 105));
+      expires1 = time(NULL) + (10 * 60);
       break;
     
     case SUMMARY_HOUR:
@@ -180,6 +186,7 @@ static void sync_changed_handler(const uint32_t key, const Tuple* new_tuple, con
       }
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Value: %s", new_tuple->value->cstring);
       text_layer_set_text_max_size(s_forecast2, new_tuple->value->cstring, GSize(144, 105));
+      expires2 = time(NULL) + (15 * 60);
       break;
     
     case SUMMARY_DAY:
@@ -189,6 +196,7 @@ static void sync_changed_handler(const uint32_t key, const Tuple* new_tuple, con
       }
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Value: %s", new_tuple->value->cstring);
       text_layer_set_text_max_size(s_forecast3, new_tuple->value->cstring, GSize(144, 105));
+      expires3 = time(NULL) + (3 * 60 * 60);
       break;
     
     case SUMMARY_WEEK:
@@ -198,16 +206,18 @@ static void sync_changed_handler(const uint32_t key, const Tuple* new_tuple, con
       }
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Value: %s", new_tuple->value->cstring);
       text_layer_set_text_max_size(s_forecast4, new_tuple->value->cstring, GSize(144, 105));
+      expires4 = time(NULL) + (24 * 60 * 60);
       break;
     
     
   }  
 }
 
+time_t recent_time = 0;
 static void update_time() {
   // Get a tm structure
-  time_t temp = time(NULL); 
-  struct tm *tick_time = localtime(&temp);
+  recent_time = time(NULL); 
+  struct tm *tick_time = localtime(&recent_time);
 
   // Create a long-lived buffer
   static char buffer[] = "00:00";
@@ -236,7 +246,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     secs_in_minute = 60;
   }
   secs_in_minute--;
-  if (secs_in_minute == 59) {
+  if ((secs_in_minute == 59) && (recent_time < expires1)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
@@ -247,7 +257,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), true);
     layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
   }
-  else if (secs_in_minute == 44) {
+  else if ((secs_in_minute == 44) && (recent_time < expires2)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
@@ -259,7 +269,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
     
   }
-  else if (secs_in_minute == 29) {
+  else if ((secs_in_minute == 29) && (recent_time < expires3)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), false);    
@@ -271,7 +281,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
     
   }
-  else if (secs_in_minute == 14) {
+  else if ((secs_in_minute == 14) && (recent_time < expires4)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
