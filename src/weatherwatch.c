@@ -1,5 +1,14 @@
 #include "pebble.h"
 
+// Things to do
+//
+// - Add an indicator of when the last update was
+// - Persistently store the weather info
+// - Indicate how long to the next screen of info
+// - Even out display times when some screens are not available 
+// - Make text_layer_set_text_max_size work out size of text area and set wrap mode
+  
+  
 static AppSync s_sync;
 static uint8_t s_sync_buffer[2000];
 
@@ -26,6 +35,7 @@ static InverterLayer *s_timelayer_2;
 static InverterLayer *s_timelayer_3;
 static InverterLayer *s_timelayer_4;
 static TextLayer *s_date;
+static TextLayer *s_updatetime;
 static TextLayer *s_forecast1;
 static TextLayer *s_forecast2;
 static TextLayer *s_forecast3;
@@ -35,6 +45,7 @@ time_t expires1 = 0;
 time_t expires2 = 0;
 time_t expires3 = 0;
 time_t expires4 = 0;
+time_t lastupdatetime = 0;
 
 static void initialise_ui(void) {
   s_window = window_create();
@@ -61,17 +72,20 @@ static void initialise_ui(void) {
   text_layer_set_font(s_time, s_res_bitham_34_medium_numbers);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_time);
   
-  // s_inverterlayer_1
-  s_inverterlayer_1 = inverter_layer_create(GRect(2, 132, 140, 1));
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_inverterlayer_1);
-  
   // s_date
-  s_date = text_layer_create(GRect(4, 107, 136, 24));
+  s_date = text_layer_create(GRect(4, 107, 80, 24));
   text_layer_set_background_color(s_date, GColorBlack);
   text_layer_set_text_color(s_date, GColorWhite);
   text_layer_set_text(s_date, "");
   text_layer_set_font(s_date, s_res_roboto_condensed_21);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_date);
+  
+  // s_updatetime
+  s_updatetime = text_layer_create(GRect(110, 113, 30, 24));
+  text_layer_set_background_color(s_updatetime, GColorBlack);
+  text_layer_set_text_color(s_updatetime, GColorWhite);
+  text_layer_set_text(s_updatetime, "00:00");
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_updatetime);
   
   // s_forecast1
   s_forecast1 = text_layer_create(GRect(0, 0, 144, 105));
@@ -117,7 +131,9 @@ static void initialise_ui(void) {
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_timelayer_4);
   layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);
   
-  
+  // s_inverterlayer_1
+  s_inverterlayer_1 = inverter_layer_create(GRect(2, 132, 140, 1));
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_inverterlayer_1);
   
 }
 
@@ -167,6 +183,7 @@ void text_layer_set_text_max_size(TextLayer * xiTextLayer, const char * xiText, 
 
 static void sync_changed_handler(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message success: %ld", key);
+  lastupdatetime = 0;
   switch (key) {
     
     case SUMMARY_NOW:
@@ -238,9 +255,15 @@ static void update_time() {
   // Display this time on the TextLayer
   text_layer_set_text(s_time, buffer);
   text_layer_set_text(s_date, buffer2);
+  
+  // Create a long-lived buffer
+  static char buffer3[] = "00:00";
+  struct tm *tick_time2 = localtime(&lastupdatetime);
+  strftime(buffer3, sizeof("00:00"), "%H:%M", tick_time2);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  lastupdatetime += 1;
   if (secs_in_minute == 0) {
     update_time();    
     secs_in_minute = 60;
