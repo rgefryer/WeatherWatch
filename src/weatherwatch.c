@@ -2,7 +2,8 @@
 
 // Things to do
 //
-// - Add an indicator of when the last update was
+// - Tidy up the time tracking code
+// - Add a config panel for entering the API key
 // - Persistently store the weather info
 // - Even out display times when some screens are not available 
 // - Make text_layer_set_text_max_size work out size of text area and set wrap mode
@@ -19,6 +20,8 @@ enum WeatherKey {
 };
 
 int secs_in_minute = 0;
+int update_pos = 0;
+int last_update_pos = 60;
 
 #define NUM_FONTS 6
 static GFont cFonts[NUM_FONTS];
@@ -44,23 +47,23 @@ time_t expires4 = 0;
 time_t lastupdatetime = 0;
 
 static void draw_status_bar(Layer *this_layer, GContext *ctx) {
-  // Draw things here using ctx
-  if (secs_in_minute == 59) {
+  if (update_pos < last_update_pos) {
     GPoint p0 = GPoint(0, 0);
     GPoint p1 = GPoint(140, 0);
     graphics_context_set_stroke_color(ctx, GColorBlack);
-    graphics_draw_line(ctx, p0, p1);  
+    graphics_draw_line(ctx, p0, p1);
+    
+    graphics_context_set_stroke_color(ctx, GColorWhite);
+    graphics_draw_pixel(ctx, GPoint(35, 1));  
+    graphics_draw_pixel(ctx, GPoint(70, 1));  
+    graphics_draw_pixel(ctx, GPoint(105, 1));     
   }
   
   GPoint p0 = GPoint(0, 0);
-  GPoint p1 = GPoint((59 - secs_in_minute) * 140 / 60, 0);
+  GPoint p1 = GPoint(update_pos * 140 / 59, 0);
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_draw_line(ctx, p0, p1);  
   
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_draw_pixel(ctx, GPoint(35, 1));  
-  graphics_draw_pixel(ctx, GPoint(70, 1));  
-  graphics_draw_pixel(ctx, GPoint(105, 1));  
 }
 
 static void initialise_ui(void) {
@@ -272,46 +275,58 @@ static void update_time() {
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   lastupdatetime += 1;
-  if (secs_in_minute == 0) {
+  if (secs_in_minute == 59) {
     update_time();    
-    secs_in_minute = 60;
+    secs_in_minute = 0;
   }
-  secs_in_minute--;
-  if ((secs_in_minute == 59) && (recent_time < expires1)) {
+  else {
+    secs_in_minute += 1;
+  }
+
+  if (update_pos <= 15) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
-    
- 
   }
-  else if ((secs_in_minute == 44) && (recent_time < expires2)) {
+  else if (update_pos <= 30) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
-    
-  
-    
   }
-  else if ((secs_in_minute == 29) && (recent_time < expires3)) {
+  else if (update_pos <= 45) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
-    
- 
   }
-  else if ((secs_in_minute == 14) && (recent_time < expires4)) {
+  else if (update_pos <= 59) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast2), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), false);        
-    
-   
-    
   } 
   layer_mark_dirty(s_graphicslayer);
+  
+  update_pos++;
+  if (update_pos == 60) {
+    if (recent_time < expires1) {
+      update_pos = 0;
+    }
+    else if (recent_time < expires2) {
+      update_pos = 15;
+    }
+    else if (recent_time < expires3) {
+      update_pos = 30;
+    }
+    else if (recent_time < expires4) {
+      update_pos = 45;
+    }      
+    else {
+      update_pos = 59;
+    }
+  }
 }
 
 void show_face(void) {
