@@ -4,7 +4,6 @@
 //
 // - Add an indicator of when the last update was
 // - Persistently store the weather info
-// - Indicate how long to the next screen of info
 // - Even out display times when some screens are not available 
 // - Make text_layer_set_text_max_size work out size of text area and set wrap mode
   
@@ -30,22 +29,39 @@ static GFont s_res_bitham_34_medium_numbers;
 static GFont s_res_roboto_condensed_21;
 static TextLayer *s_time;
 static InverterLayer *s_inverterlayer_1;
-static InverterLayer *s_timelayer_1;
-static InverterLayer *s_timelayer_2;
-static InverterLayer *s_timelayer_3;
-static InverterLayer *s_timelayer_4;
 static TextLayer *s_date;
 static TextLayer *s_updatetime;
 static TextLayer *s_forecast1;
 static TextLayer *s_forecast2;
 static TextLayer *s_forecast3;
 static TextLayer *s_forecast4;
+static Layer *s_graphicslayer;
 
 time_t expires1 = 0;
 time_t expires2 = 0;
 time_t expires3 = 0;
 time_t expires4 = 0;
 time_t lastupdatetime = 0;
+
+static void draw_status_bar(Layer *this_layer, GContext *ctx) {
+  // Draw things here using ctx
+  if (secs_in_minute == 59) {
+    GPoint p0 = GPoint(0, 0);
+    GPoint p1 = GPoint(140, 0);
+    graphics_context_set_stroke_color(ctx, GColorBlack);
+    graphics_draw_line(ctx, p0, p1);  
+  }
+  
+  GPoint p0 = GPoint(0, 0);
+  GPoint p1 = GPoint((59 - secs_in_minute) * 140 / 60, 0);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_line(ctx, p0, p1);  
+  
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_pixel(ctx, GPoint(35, 1));  
+  graphics_draw_pixel(ctx, GPoint(70, 1));  
+  graphics_draw_pixel(ctx, GPoint(105, 1));  
+}
 
 static void initialise_ui(void) {
   s_window = window_create();
@@ -118,23 +134,14 @@ static void initialise_ui(void) {
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_forecast4);
   layer_set_hidden(text_layer_get_layer(s_forecast4), true);
 
-  // s_timelayer_1
-  s_timelayer_1 = inverter_layer_create(GRect(0, 105, 35, 1));
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timelayer_1);
-  s_timelayer_2 = inverter_layer_create(GRect(35, 105, 35, 1));
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timelayer_2);
-  layer_set_hidden(inverter_layer_get_layer(s_timelayer_2), true);
-  s_timelayer_3 = inverter_layer_create(GRect(70, 105, 35, 1));
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timelayer_3);
-  layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), true);
-  s_timelayer_4 = inverter_layer_create(GRect(105, 105, 35, 1));
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timelayer_4);
-  layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);
-  
-  // s_inverterlayer_1
+    // s_inverterlayer_1
   s_inverterlayer_1 = inverter_layer_create(GRect(2, 132, 140, 1));
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_inverterlayer_1);
   
+  // s_graphicslayer
+  s_graphicslayer = layer_create(GRect(0, 105, 144, 2));
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_graphicslayer);
+  layer_set_update_proc(s_graphicslayer, draw_status_bar);
 }
 
 static void destroy_ui(void) {
@@ -260,6 +267,7 @@ static void update_time() {
   static char buffer3[] = "00:00";
   struct tm *tick_time2 = localtime(&lastupdatetime);
   strftime(buffer3, sizeof("00:00"), "%H:%M", tick_time2);
+  text_layer_set_text(s_updatetime, buffer3);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
@@ -275,10 +283,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
     
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_1), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_2), true);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), true);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
+ 
   }
   else if ((secs_in_minute == 44) && (recent_time < expires2)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
@@ -286,10 +291,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
     
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_1), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_2), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), true);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
+  
     
   }
   else if ((secs_in_minute == 29) && (recent_time < expires3)) {
@@ -298,11 +300,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(text_layer_get_layer(s_forecast3), false);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), true);    
     
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_1), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_2), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), true);    
-    
+ 
   }
   else if ((secs_in_minute == 14) && (recent_time < expires4)) {
     layer_set_hidden(text_layer_get_layer(s_forecast1), true);    
@@ -310,12 +308,10 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     layer_set_hidden(text_layer_get_layer(s_forecast3), true);    
     layer_set_hidden(text_layer_get_layer(s_forecast4), false);        
     
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_1), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_2), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_3), false);
-    layer_set_hidden(inverter_layer_get_layer(s_timelayer_4), false);    
+   
     
   } 
+  layer_mark_dirty(s_graphicslayer);
 }
 
 void show_face(void) {
